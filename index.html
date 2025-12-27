@@ -459,6 +459,177 @@
       width: 100%;
       font-size: 14.3px;
     }
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(3px);
+      animation: fadeIn 0.2s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal-content {
+      background: var(--card-bg);
+      margin: 3% auto;
+      padding: 0;
+      border-radius: 11.4px;
+      width: 90%;
+      max-width: 800px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease-out;
+      max-height: 90vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    .modal-header {
+      background: var(--primary);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 11.4px 11.4px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .modal-close {
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    .modal-body {
+      padding: 30px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-section {
+      margin-bottom: 25px;
+    }
+    .modal-section:last-child {
+      margin-bottom: 0;
+    }
+    .modal-section h3 {
+      margin: 0 0 15px 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+    }
+    .modal-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    .modal-info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-info-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      opacity: 0.7;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 5px;
+    }
+    .modal-info-value {
+      font-size: 15px;
+      color: var(--text);
+      word-wrap: break-word;
+    }
+    .modal-info-value.empty {
+      opacity: 0.5;
+      font-style: italic;
+    }
+    .modal-logs {
+      background: var(--bg);
+      padding: 15px;
+      border-radius: 7.6px;
+      font-family: 'Inter', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+    }
+    .modal-logs.empty {
+      opacity: 0.5;
+      font-style: italic;
+    }
+    .view-details-btn {
+      position: absolute;
+      bottom: 9.5px;
+      left: 9.5px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 3.8px;
+      padding: 5.7px 11.4px;
+      cursor: pointer;
+      font-size: 12.4px;
+      font-weight: 600;
+      opacity: 0.85;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 10;
+    }
+    .view-details-btn:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+    @media screen and (max-width: 768px) {
+      .modal-content {
+        width: 95%;
+        margin: 5% auto;
+      }
+      .modal-header {
+        padding: 15px 20px;
+      }
+      .modal-body {
+        padding: 20px;
+      }
+      .modal-info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -548,6 +719,20 @@
     <button onclick="addPatient()">Submit</button>
   </div>
   <div id="wardsContainer"></div>
+
+  <!-- Patient Details Modal -->
+  <div id="patientModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalPatientName">Patient Details</h2>
+        <button class="modal-close" onclick="closePatientModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Content will be dynamically inserted -->
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script>
@@ -953,6 +1138,183 @@
       header.classList.toggle('expanded', !isExpanded);
       console.log(`Toggled Discharge ward: ${isExpanded ? 'collapsed' : 'expanded'}`);
     }
+    function openPatientModal(id) {
+      db.collection('patients').doc(id).get().then(doc => {
+        if (!doc.exists) {
+          console.error('Patient not found:', id);
+          return;
+        }
+        const d = doc.data();
+        const modal = document.getElementById('patientModal');
+        const modalBody = document.getElementById('modalBody');
+        const modalTitle = document.getElementById('modalPatientName');
+
+        // Set title
+        modalTitle.innerText = d.name || 'Patient Details';
+
+        // Calculate days admitted
+        const daysAdmitted = calculateDaysAdmitted(d.doa);
+
+        // Helper to display value or empty state
+        const displayValue = (value) => {
+          if (value && value.trim() !== '') {
+            return `<span class="modal-info-value">${value}</span>`;
+          }
+          return `<span class="modal-info-value empty">Not specified</span>`;
+        };
+
+        // Build modal content
+        let content = `
+          <div class="modal-section">
+            <h3>Basic Information</h3>
+            <div class="modal-info-grid">
+              <div class="modal-info-item">
+                <div class="modal-info-label">Patient Name</div>
+                ${displayValue(d.name)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Patient ID</div>
+                ${displayValue(d.id)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Age</div>
+                ${displayValue(d.age)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Sex</div>
+                ${displayValue(d.sex)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Weight</div>
+                ${displayValue(d.weight)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Bed</div>
+                ${displayValue(d.bed)}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <h3>Admission Details</h3>
+            <div class="modal-info-grid">
+              <div class="modal-info-item">
+                <div class="modal-info-label">Date of Admission</div>
+                ${displayValue(d.doa ? `${d.doa} (${daysAdmitted})` : '')}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Shift</div>
+                ${displayValue(d.shift)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Ward</div>
+                ${displayValue(d.ward)}
+              </div>
+              <div class="modal-info-item">
+                <div class="modal-info-label">Status</div>
+                <span class="modal-info-value">${d.isNew ? 'New Patient' : 'Existing Patient'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <h3>Medical Information</h3>
+            <div class="modal-info-grid">
+              <div class="modal-info-item" style="grid-column: 1 / -1;">
+                <div class="modal-info-label">Diagnosis</div>
+                ${displayValue(d.diagnosis)}
+              </div>
+              <div class="modal-info-item" style="grid-column: 1 / -1;">
+                <div class="modal-info-label">Medications</div>
+                ${displayValue(d.medications)}
+              </div>
+              <div class="modal-info-item" style="grid-column: 1 / -1;">
+                <div class="modal-info-label">Current Issues</div>
+                ${displayValue(d.issues)}
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <h3>History of Present Illness (HOPI)</h3>
+            ${d.hopi && d.hopi.trim() ?
+              `<div class="modal-logs">${d.hopi}</div>` :
+              `<div class="modal-logs empty">No HOPI recorded</div>`
+            }
+          </div>
+
+          <div class="modal-section">
+            <h3>Current Plan</h3>
+            ${d.plan && d.plan.trim() ?
+              `<div class="modal-logs">${d.plan}</div>` :
+              `<div class="modal-logs empty">No current plan</div>`
+            }
+          </div>
+
+          <div class="modal-section">
+            <h3>Plan History / Progress Notes</h3>
+            ${d.logs && d.logs.trim() ?
+              `<div class="modal-logs">${d.logs}</div>` :
+              `<div class="modal-logs empty">No logged plans yet</div>`
+            }
+          </div>
+        `;
+
+        // If there's DOB/DOT info, add it
+        if (d.dob || d.dot) {
+          const birthInfo = `
+            <div class="modal-section">
+              <h3>Birth Information</h3>
+              <div class="modal-info-grid">
+                ${d.dob ? `
+                  <div class="modal-info-item">
+                    <div class="modal-info-label">Date of Birth</div>
+                    ${displayValue(d.dob)}
+                  </div>
+                ` : ''}
+                ${d.dot ? `
+                  <div class="modal-info-item">
+                    <div class="modal-info-label">Time of Birth</div>
+                    ${displayValue(d.dot)}
+                  </div>
+                ` : ''}
+                <div class="modal-info-item">
+                  <div class="modal-info-label">Age Calculation</div>
+                  <span class="modal-info-value">${d.isAutoAge ? 'Automatic (HOL/DOL)' : 'Manual'}</span>
+                </div>
+              </div>
+            </div>
+          `;
+          // Insert before the Medical Information section
+          content = content.replace('<div class="modal-section">\n            <h3>Medical Information</h3>',
+            birthInfo + '\n          <div class="modal-section">\n            <h3>Medical Information</h3>');
+        }
+
+        modalBody.innerHTML = content;
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      }).catch(error => {
+        console.error('Error loading patient details:', error);
+      });
+    }
+    function closePatientModal() {
+      const modal = document.getElementById('patientModal');
+      modal.style.display = 'none';
+      document.body.style.overflow = 'auto'; // Restore scrolling
+    }
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+      const modal = document.getElementById('patientModal');
+      if (event.target === modal) {
+        closePatientModal();
+      }
+    }
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closePatientModal();
+      }
+    });
     function generateReportHeader(type, date, adM, adE, adN, disM, disE, disN, totalAd, totalDis, totalCount) {
       if (type === 'NICU') {
         return `NICU HANDOVER\n` +
@@ -1321,6 +1683,7 @@
               <button class="delete-btn" onclick="deletePatient('${id}')">×</button>
               <span class="new-badge${d.isNew ? ' new-active' : ''}" data-id="${id}">NEW</span>
               ${dischargeTag}
+              <button class="view-details-btn" onclick="openPatientModal('${id}')">View Details</button>
               <p><strong>Name:</strong> <span contenteditable class="editable" onblur="updateField('${id}', 'name', this.innerText)">${d.name}</span></p>
               <p><strong>ID:</strong> <span contenteditable class="editable" onblur="updateField('${id}', 'id', this.innerText)">${d.id || ''}</span></p>
               <p><strong>DOA:</strong> <span contenteditable class="editable" onblur="updateField('${id}', 'doa', this.innerText)">${d.doa || ''}</span> <span id="doa-days-${id}">(${daysAdmitted})</span></p>
